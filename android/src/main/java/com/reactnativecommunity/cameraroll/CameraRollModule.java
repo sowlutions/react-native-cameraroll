@@ -74,8 +74,6 @@ public class CameraRollModule extends ReactContextBaseJavaModule {
     Images.Media.DATE_TAKEN,
     MediaStore.MediaColumns.WIDTH,
     MediaStore.MediaColumns.HEIGHT,
-    Images.Media.LONGITUDE,
-    Images.Media.LATITUDE,
     MediaStore.MediaColumns.DATA
   };
 
@@ -373,8 +371,6 @@ public class CameraRollModule extends ReactContextBaseJavaModule {
     int dateTakenIndex = media.getColumnIndex(Images.Media.DATE_TAKEN);
     int widthIndex = media.getColumnIndex(MediaStore.MediaColumns.WIDTH);
     int heightIndex = media.getColumnIndex(MediaStore.MediaColumns.HEIGHT);
-    int longitudeIndex = media.getColumnIndex(Images.Media.LONGITUDE);
-    int latitudeIndex = media.getColumnIndex(Images.Media.LATITUDE);
     int dataIndex = media.getColumnIndex(MediaStore.MediaColumns.DATA);
 
     for (int i = 0; i < limit && !media.isAfterLast(); i++) {
@@ -384,8 +380,6 @@ public class CameraRollModule extends ReactContextBaseJavaModule {
           putImageInfo(resolver, media, node, idIndex, widthIndex, heightIndex, dataIndex, mimeTypeIndex);
       if (imageInfoSuccess) {
         putBasicNodeInfo(media, node, mimeTypeIndex, groupNameIndex, dateTakenIndex);
-        putLocationInfo(media, node, longitudeIndex, latitudeIndex);
-
         edge.putMap("node", node);
         edges.pushMap(edge);
       } else {
@@ -491,20 +485,6 @@ public class CameraRollModule extends ReactContextBaseJavaModule {
 
     return true;
   }
-
-  private static void putLocationInfo(
-      Cursor media,
-      WritableMap node,
-      int longitudeIndex,
-      int latitudeIndex) {
-    double longitude = media.getDouble(longitudeIndex);
-    double latitude = media.getDouble(latitudeIndex);
-    if (longitude > 0 || latitude > 0) {
-      WritableMap location = new WritableNativeMap();
-      location.putDouble("longitude", longitude);
-      location.putDouble("latitude", latitude);
-      node.putMap("location", location);
-    }
-  }
 }
+
 
