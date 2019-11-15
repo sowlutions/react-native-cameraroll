@@ -308,6 +308,22 @@ RCT_EXPORT_METHOD(getPhotos:(NSDictionary *)params
       CLLocation *const loc = asset.location;
       NSString *const origFilename = resource.originalFilename;
 
+      // SHOULD REMOVE THIS ASAP
+      NSString __block *url = @"";
+      if ([assetMediaTypeLabel isEqual:@"image"]) {
+            [asset requestContentEditingInputWithOptions:nil completionHandler:^(PHContentEditingInput * _Nullable contentEditingInput, NSDictionary * _Nonnull info) {
+              url = contentEditingInput.fullSizeImageURL.absoluteString;
+            }];
+      } else {
+        [[PHImageManager defaultManager] requestAVAssetForVideo:asset options:nil resultHandler:^(AVAsset * _Nullable asset, AVAudioMix * _Nullable audioMix, NSDictionary * _Nullable info) {
+          AVURLAsset *urlAsset = (AVURLAsset*)asset;
+          url = [[urlAsset URL] absoluteString];
+        }];
+      }
+
+      do { } while( [url isEqual:@""] );
+      // END - SHOULD REMOVE THIS ASAP
+
       // A note on isStored: in the previous code that used ALAssets, isStored
       // was always set to YES, probably because iCloud-synced images were never returned (?).
       // To get the "isStored" information and filename, we would need to actually request the
@@ -321,6 +337,7 @@ RCT_EXPORT_METHOD(getPhotos:(NSDictionary *)params
           @"group_name": currentCollectionName,
           @"image": @{
               @"uri": uri,
+              @"url": url,
               @"filename": origFilename,
               @"height": @([asset pixelHeight]),
               @"width": @([asset pixelWidth]),
