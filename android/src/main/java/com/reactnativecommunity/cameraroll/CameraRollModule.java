@@ -1,3 +1,6 @@
+rody.yaacoub
+rody.yaacoub
+6:43 PM
 /**
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
@@ -46,6 +49,7 @@ import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Arrays;
 
 import javax.annotation.Nullable;
 
@@ -230,6 +234,8 @@ public class CameraRollModule extends ReactContextBaseJavaModule {
     String after = params.hasKey("after") ? params.getString("after") : null;
     String groupName = params.hasKey("groupName") ? params.getString("groupName") : null;
     String assetType = params.hasKey("assetType") ? params.getString("assetType") : ASSET_TYPE_PHOTOS;
+    boolean minimal = params.hasKey("minimal") ? params.getBoolean("minimal") : false;
+    ReadableArray uris = params.hasKey("uris") ? params.getArray("uris") : null;
     ReadableArray mimeTypes = params.hasKey("mimeTypes")
         ? params.getArray("mimeTypes")
         : null;
@@ -241,6 +247,8 @@ public class CameraRollModule extends ReactContextBaseJavaModule {
           groupName,
           mimeTypes,
           assetType,
+          minimal,
+          uris,
           promise)
           .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
   }
@@ -251,6 +259,10 @@ public class CameraRollModule extends ReactContextBaseJavaModule {
     private final @Nullable String mAfter;
     private final @Nullable String mGroupName;
     private final @Nullable ReadableArray mMimeTypes;
+    private final @Nullable ReadableArray mUris;
+    private final @Nullable boolean mMinimal;
+
+
     private final Promise mPromise;
     private final String mAssetType;
 
@@ -261,6 +273,8 @@ public class CameraRollModule extends ReactContextBaseJavaModule {
         @Nullable String groupName,
         @Nullable ReadableArray mimeTypes,
         String assetType,
+        @Nullable boolean minimal,
+        @Nullable ReadableArray uris,
         Promise promise) {
       super(context);
       mContext = context;
@@ -270,6 +284,8 @@ public class CameraRollModule extends ReactContextBaseJavaModule {
       mMimeTypes = mimeTypes;
       mPromise = promise;
       mAssetType = assetType;
+      mMinimal = minimal;
+      mUris = uris;
     }
 
     @Override
@@ -330,7 +346,7 @@ public class CameraRollModule extends ReactContextBaseJavaModule {
           mPromise.reject(ERROR_UNABLE_TO_LOAD, "Could not get media");
         } else {
           try {
-            putEdges(resolver, media, response, mFirst);
+            putEdges(resolver, media, response, mFirst, mMinimal, mUris);
             putPageInfo(media, response, mFirst);
           } finally {
             media.close();
@@ -362,7 +378,9 @@ public class CameraRollModule extends ReactContextBaseJavaModule {
       ContentResolver resolver,
       Cursor media,
       WritableMap response,
-      int limit) {
+      int limit,
+      boolean minimal,
+      ReadableArray uris) {
     WritableArray edges = new WritableNativeArray();
     media.moveToFirst();
     int idIndex = media.getColumnIndex(Images.Media._ID);
@@ -374,18 +392,36 @@ public class CameraRollModule extends ReactContextBaseJavaModule {
     int dataIndex = media.getColumnIndex(MediaStore.MediaColumns.DATA);
 
     for (int i = 0; i < limit && !media.isAfterLast(); i++) {
-      WritableMap edge = new WritableNativeMap();
-      WritableMap node = new WritableNativeMap();
-      boolean imageInfoSuccess =
-          putImageInfo(resolver, media, node, idIndex, widthIndex, heightIndex, dataIndex, mimeTypeIndex);
-      if (imageInfoSuccess) {
-        putBasicNodeInfo(media, node, mimeTypeIndex, groupNameIndex, dateTakenIndex);
-        edge.putMap("node", node);
+      Uri photoUri = Uri.parse("file://" + media.getString(dataIndex));
+
+      if (minimal) {
+        WritableMap edge = new WritableNativeMap();
+        edge.putString("uri", photoUri.toString());
         edges.pushMap(edge);
       } else {
-        // we skipped an image because we couldn't get its details (e.g. width/height), so we
-        // decrement i in order to correctly reach the limit, if the cursor has enough rows
-        i--;
+        boolean found = false;
+        for(int j = 0; j < uris.size(); j++) {
+          if(uris.getString(i).equals(photoUri.toString())) {
+            found = true;
+          }
+        }
+        if(found) {
+          continue;
+        }
+        WritableMap edge = new WritableNativeMap();
+        WritableMap node = new WritableNativeMap();
+        boolean imageInfoSuccess =
+                putImageInfo(resolver, media, node, idIndex, widthIndex, heightIndex, dataIndex, mimeTypeIndex);
+        if (imageInfoSuccess) {
+          putBasicNodeInfo(media, node, mimeTypeIndex, groupNameIndex, dateTakenIndex);
+          edge.putString("uri", photoUri.toString());
+          edge.putMap("node", node);
+          edges.pushMap(edge);
+        } else {
+          // we skipped an image because we couldn't get its details (e.g. width/height), so we
+          // decrement i in order to correctly reach the limit, if the cursor has enough rows
+          i--;
+        }
       }
       media.moveToNext();
     }
@@ -486,5 +522,3 @@ public class CameraRollModule extends ReactContextBaseJavaModule {
     return true;
   }
 }
-
-
