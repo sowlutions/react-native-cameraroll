@@ -1,6 +1,3 @@
-rody.yaacoub
-rody.yaacoub
-6:43 PM
 /**
  * Copyright (c) Facebook, Inc. and its affiliates.
  *
