@@ -46,7 +46,6 @@ import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Arrays;
 
 import javax.annotation.Nullable;
 
@@ -256,7 +255,7 @@ public class CameraRollModule extends ReactContextBaseJavaModule {
     private final @Nullable String mAfter;
     private final @Nullable String mGroupName;
     private final @Nullable ReadableArray mMimeTypes;
-    private final @Nullable ReadableArray mUris;
+    private final @Nullable ArrayList mUris;
     private final @Nullable boolean mMinimal;
 
 
@@ -282,7 +281,12 @@ public class CameraRollModule extends ReactContextBaseJavaModule {
       mPromise = promise;
       mAssetType = assetType;
       mMinimal = minimal;
-      mUris = uris;
+
+      if (uris != null) {
+        mUris = uris.toArrayList();
+      } else {
+        mUris = new ArrayList();
+      }
     }
 
     @Override
@@ -315,6 +319,14 @@ public class CameraRollModule extends ReactContextBaseJavaModule {
             + ASSET_TYPE_PHOTOS + "', '" + ASSET_TYPE_VIDEOS + "' or '" + ASSET_TYPE_ALL + "'."
         );
         return;
+      }
+
+      if (mUris.size() > 0){
+        String uriString = "";
+        for (Object strTemp : mUris){
+          uriString += "'" + strTemp.toString() + "', ";
+        }
+        selection.append(" AND " + MediaStore.MediaColumns.DATA + " IN (" + uriString.replaceAll(", $", "") + ")");
       }
 
 
@@ -377,7 +389,7 @@ public class CameraRollModule extends ReactContextBaseJavaModule {
       WritableMap response,
       int limit,
       boolean minimal,
-      ReadableArray uris) {
+      ArrayList uris) {
     WritableArray edges = new WritableNativeArray();
     media.moveToFirst();
     int idIndex = media.getColumnIndex(Images.Media._ID);
@@ -390,36 +402,25 @@ public class CameraRollModule extends ReactContextBaseJavaModule {
 
     for (int i = 0; i < limit && !media.isAfterLast(); i++) {
       Uri photoUri = Uri.parse("file://" + media.getString(dataIndex));
+      WritableMap edge = new WritableNativeMap();
 
       if (minimal) {
-        WritableMap edge = new WritableNativeMap();
         edge.putString("uri", photoUri.toString());
         edges.pushMap(edge);
       } else {
-        if(uris.size() > 0) {
-          boolean found = false;
-          for(int j = 0; j < uris.size(); j++) {
-            if(uris.getString(i).equals(photoUri.toString())) {
-              found = true;
-            }
-          }
-          if(found) {
-            continue;
-          }
-          WritableMap edge = new WritableNativeMap();
-          WritableMap node = new WritableNativeMap();
-          boolean imageInfoSuccess =
-                  putImageInfo(resolver, media, node, idIndex, widthIndex, heightIndex, dataIndex, mimeTypeIndex);
-          if (imageInfoSuccess) {
-            putBasicNodeInfo(media, node, mimeTypeIndex, groupNameIndex, dateTakenIndex);
-            edge.putString("uri", photoUri.toString());
-            edge.putMap("node", node);
-            edges.pushMap(edge);
-          } else {
-            // we skipped an image because we couldn't get its details (e.g. width/height), so we
-            // decrement i in order to correctly reach the limit, if the cursor has enough rows
-            i--;
-          }
+        WritableMap node = new WritableNativeMap();
+        boolean imageInfoSuccess =
+                putImageInfo(resolver, media, node, idIndex, widthIndex, heightIndex, dataIndex, mimeTypeIndex);
+        if (imageInfoSuccess) {
+          putBasicNodeInfo(media, node, mimeTypeIndex, groupNameIndex, dateTakenIndex);
+          edge.putString("uri", photoUri.toString());
+          edge.putString("uri", photoUri.toString());
+          edge.putMap("node", node);
+          edges.pushMap(edge);
+        } else {
+          // we skipped an image because we couldn't get its details (e.g. width/height), so we
+          // decrement i in order to correctly reach the limit, if the cursor has enough rows
+          i--;
         }
       }
       media.moveToNext();
