@@ -396,28 +396,30 @@ public class CameraRollModule extends ReactContextBaseJavaModule {
         edge.putString("uri", photoUri.toString());
         edges.pushMap(edge);
       } else {
-        boolean found = false;
-        for(int j = 0; j < uris.size(); j++) {
-          if(uris.getString(i).equals(photoUri.toString())) {
-            found = true;
+        if(uris.size() > 0) {
+          boolean found = false;
+          for(int j = 0; j < uris.size(); j++) {
+            if(uris.getString(i).equals(photoUri.toString())) {
+              found = true;
+            }
           }
-        }
-        if(found) {
-          continue;
-        }
-        WritableMap edge = new WritableNativeMap();
-        WritableMap node = new WritableNativeMap();
-        boolean imageInfoSuccess =
-                putImageInfo(resolver, media, node, idIndex, widthIndex, heightIndex, dataIndex, mimeTypeIndex);
-        if (imageInfoSuccess) {
-          putBasicNodeInfo(media, node, mimeTypeIndex, groupNameIndex, dateTakenIndex);
-          edge.putString("uri", photoUri.toString());
-          edge.putMap("node", node);
-          edges.pushMap(edge);
-        } else {
-          // we skipped an image because we couldn't get its details (e.g. width/height), so we
-          // decrement i in order to correctly reach the limit, if the cursor has enough rows
-          i--;
+          if(found) {
+            continue;
+          }
+          WritableMap edge = new WritableNativeMap();
+          WritableMap node = new WritableNativeMap();
+          boolean imageInfoSuccess =
+                  putImageInfo(resolver, media, node, idIndex, widthIndex, heightIndex, dataIndex, mimeTypeIndex);
+          if (imageInfoSuccess) {
+            putBasicNodeInfo(media, node, mimeTypeIndex, groupNameIndex, dateTakenIndex);
+            edge.putString("uri", photoUri.toString());
+            edge.putMap("node", node);
+            edges.pushMap(edge);
+          } else {
+            // we skipped an image because we couldn't get its details (e.g. width/height), so we
+            // decrement i in order to correctly reach the limit, if the cursor has enough rows
+            i--;
+          }
         }
       }
       media.moveToNext();
