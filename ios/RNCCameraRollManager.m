@@ -331,6 +331,11 @@ RCT_EXPORT_METHOD(getPhotos:(NSDictionary *)params
       if (![assetResources firstObject]) {
         return nil;
       }
+      int *fileSize = 0;
+      for (PHAsset *resource in assetResources) {
+        fileSize += [[resource valueForKey:@"fileSize"] intValue];
+      }
+    
       PHAssetResource *const _Nonnull resource = [assetResources firstObject];
 
       if ([mimeTypes count] > 0) {
@@ -393,7 +398,7 @@ RCT_EXPORT_METHOD(getPhotos:(NSDictionary *)params
             @"filename": origFilename,
             @"height": @([asset pixelHeight]),
             @"width": @([asset pixelWidth]),
-            @"fileSize": [resource valueForKey:@"fileSize"],
+            @"fileSize": [NSString stringWithFormat:@"%d", fileSize],
             @"isStored": @YES, // this field doesn't seem to exist on android
             @"playableDuration": @([asset duration]) // fractional seconds
         },
